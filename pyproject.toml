@@ -1,0 +1,15 @@
+[project]
+name = "echo-of-mind"
+version = "0.1.0"
+description = "心语 —— 先织好安全网，再开始对话。本地运行、隐私优先的非临床情绪陪伴。"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["backend"]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]
