@@ -1,6 +1,13 @@
+# 🐍 环境与缓存
 .venv/
 __pycache__/
 *.pyc
 .pytest_cache/
 *.egg-info/
 uv.lock
+# 🔐 永不进仓库：口令文件=门垫下的钥匙
+backend/app/.diary_key
+# 🧠 模型文件（GitHub 单文件限 100MB，且不该公开分发用户已下载的）
+*.gguf
+# 📦 打包产物
+dist/
