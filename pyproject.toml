@@ -5,6 +5,7 @@ description = "心语 —— 先织好安全网，再开始对话。本地运行
 license = "Apache-2.0"
 requires-python = ">=3.10"
 dependencies = [
+    "cryptography>=50.0.2",
     "fastapi>=0.162.4",
     "httpx>=0.28.1",
     "uvicorn[standard]>=0.54.0",
