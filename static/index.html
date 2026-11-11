@@ -31,6 +31,14 @@
   dialog p { font-size:13px; color:#9ab; margin:8px 0; line-height:1.6; }
   #entries { margin-top:10px; max-height:40vh; overflow-y:auto; font-size:13px; }
   .entry { background:#141a20; border-radius:8px; padding:8px 10px; margin-bottom:6px; }
+
+  /* ===== 新增样式 ===== */
+  dialog { max-height:85vh; overflow-y:auto; }
+  .emobar { display:flex; align-items:center; gap:8px; margin:4px 0; font-size:12px; }
+  .emobar span { width:34px; color:#9ab; }
+  .emobar i { height:8px; background:var(--accent); border-radius:4px; display:block; }
+  .emobar em { font-style:normal; color:#67788a; }
+  .caption { font-size:11px; color:#67788a; margin:2px 0 8px; }
 </style>
 </head>
 <body>
@@ -47,12 +55,14 @@
 </div>
 
 <dialog id="dlg">
-  <h3>日记已加密</h3>
+  <h3 id="dlgTitle">日记已加密</h3>
   <p>每一段对话都以密文保存，只有口令能打开。首次使用请先保存口令文件
      <code>backend/app/.diary_key</code> 中的字符串。</p>
   <input type="password" id="pass" placeholder="输入口令解锁" style="width:100%;padding:10px;">
   <p><button id="doUnlock" style="padding:8px 18px;">解锁</button>
      <button id="lockBtn" style="padding:8px 18px;display:none;">🔒 上锁</button></p>
+  <div id="trend"></div>
+  <div id="emoBars"></div>
   <div id="entries"></div>
 </dialog>
 
@@ -95,7 +105,7 @@ document.getElementById("f").onsubmit = async e => {
   }
 };
 
-/* ---------- 日记面板（含锁状态管理） ---------- */
+/* ---------- 日记面板（锁状态 + 情绪趋势） ---------- */
 const dlg = document.getElementById("dlg");
 
 function renderDiary(entries) {
@@ -106,24 +116,66 @@ function renderDiary(entries) {
   ).join("");
 }
 
+function renderTrend(points, emo) {
+  const CN = {sad:"难过", anxious:"焦虑", angry:"愤怒",
+              tired:"疲惫", lonely:"孤独", positive:"积极"};
+  const trendBox = document.getElementById("trend");
+  const emoBox = document.getElementById("emoBars");
+  if (points.length < 2) {
+    trendBox.innerHTML = "<p class='caption'>再聊几次，这里会出现你的情绪曲线（0 沉重 → 6 明亮）。</p>";
+    emoBox.innerHTML = "";
+    return;
+  }
+  const w = 380, h = 110, pad = 10;
+  const X = i => pad + i * (w - 2*pad) / (points.length - 1);
+  const Y = m => h - pad - (m / 6) * (h - 2*pad);
+  const path = points.map((p, i) =>
+    (i ? "L" : "M") + X(i).toFixed(1) + "," + Y(p.mood).toFixed(1)).join(" ");
+  const dots = points.map((p, i) =>
+    `<circle cx="${X(i).toFixed(1)}" cy="${Y(p.mood).toFixed(1)}" r="3.5"
+       fill="${p.risk >= 1 ? "#e0a34a" : "var(--accent)"}">
+       <title>${new Date(p.ts*1000).toLocaleString("zh-CN")} · ${p.mood}/6</title></circle>`).join("");
+  trendBox.innerHTML =
+    `<svg viewBox="0 0 ${w} ${h}" width="100%" height="110">
+       <line x1="${pad}" y1="${Y(3)}" x2="${w-pad}" y2="${Y(3)}"
+             stroke="#2a3540" stroke-dasharray="4 4"/>
+       <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+       ${dots}
+     </svg>
+     <p class="caption">情绪曲线 · 橙点 = 当时检测到困扰 · 虚线 = 中性线</p>`;
+  const total = Object.values(emo).reduce((a, b) => a + b, 0);
+  emoBox.innerHTML = total
+    ? Object.entries(emo).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
+        `<div class="emobar"><span>${CN[k] || k}</span>
+           <i style="width:${Math.round(v / total * 180)}px"></i><em>×${v}</em></div>`).join("")
+    : "";
+}
+
 async function refreshDiary() {
   const health = await (await fetch("/api/health")).json();
   const pass = document.getElementById("pass");
   const unlockBtn = document.getElementById("doUnlock");
   const lockBtn = document.getElementById("lockBtn");
-  const entriesBox = document.getElementById("entries");
+  const title = document.getElementById("dlgTitle");
   if (health.unlocked) {
     pass.style.display = "none";
     unlockBtn.style.display = "none";
     lockBtn.style.display = "inline-block";
+    title.textContent = "情绪日记 · 已解锁";
     const r = await fetch("/api/diary");
     if (r.ok) renderDiary((await r.json()).entries);
+    const t = await fetch("/api/trends");
+    if (t.ok) { const j = await t.json(); renderTrend(j.points, j.emotions); }
   } else {
     pass.style.display = "block";
     unlockBtn.style.display = "inline-block";
     lockBtn.style.display = "none";
     pass.value = "";
-    entriesBox.innerHTML = "<p>🔒 已上锁。输入口令后可查看日记。</p>";
+    title.textContent = "日记已加密";
+    document.getElementById("trend").innerHTML = "";
+    document.getElementById("emoBars").innerHTML = "";
+    document.getElementById("entries").innerHTML =
+      "<p>🔒 已上锁。输入口令后可查看日记。</p>";
   }
 }
 
@@ -147,5 +199,6 @@ document.getElementById("lockBtn").onclick = async () => {
   refreshDiary();
 };
 </script>
+
 </body>
 </html>
