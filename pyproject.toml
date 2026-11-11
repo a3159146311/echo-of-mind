@@ -4,6 +4,11 @@ version = "0.1.0"
 description = "心语 —— 先织好安全网，再开始对话。本地运行、隐私优先的非临床情绪陪伴。"
 license = "Apache-2.0"
 requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.162.4",
+    "httpx>=0.28.1",
+    "uvicorn[standard]>=0.54.0",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["backend"]
